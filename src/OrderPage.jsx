@@ -178,25 +178,51 @@ const initialCustomer = {
   notes: "",
 };
 
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function buildRef() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const datePart = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(
+    now.getFullYear()
+  ).slice(2)}`;
+  const timePart = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+  return `${datePart}-${timePart}`;
+}
+
 function buildMessage(cart, customer, total) {
-  const lines = [`Hello ${BUSINESS.name}, I'd like to place an order:`, ``];
+  const lines = [`Hello ${BUSINESS.name} 👋`, ``, `I'd like to place an order:`, ``, `🧁 Order Details:`];
 
   cart.forEach((line) => {
     const label = line.size ? `${line.name} (${line.size})` : line.name;
-    lines.push(
-      `${label} x${line.quantity} - ${formatNaira(line.unitPrice * line.quantity)}`
-    );
+    lines.push(`- ${label} x${line.quantity} — ${formatNaira(line.unitPrice * line.quantity)}`);
   });
 
-  lines.push(``, `Total: ${formatNaira(total)}`, ``);
-  lines.push(`Delivery date: ${customer.date || "—"}`);
-  lines.push(
-    `${customer.fulfilment}${
-      customer.fulfilment === "Delivery" ? `: ${customer.address || "—"}` : ""
-    }`
-  );
-  lines.push(``, `Name: ${customer.name || "—"}`, `Phone: ${customer.phone || "—"}`);
-  if (customer.notes) lines.push(``, `Notes: ${customer.notes}`);
+  lines.push(``, `💰 Total: ${formatNaira(total)}`, ``);
+
+  if (customer.fulfilment === "Delivery") {
+    lines.push(`📅 Delivery Date: ${formatDate(customer.date)}`);
+    lines.push(`🚚 Delivery Address: ${customer.address || "—"}`);
+  } else {
+    lines.push(`📅 Pickup Date: ${formatDate(customer.date)}`);
+    lines.push(`📍 Method: Pickup`);
+  }
+
+  lines.push(``, `👤 Customer Details:`, `Name: ${customer.name || "—"}`, `Phone: ${customer.phone || "—"}`);
+
+  if (customer.notes) {
+    lines.push(``, `📝 Notes:`, customer.notes);
+  }
+
+  lines.push(``, `Ref: ${buildRef()}`);
 
   return lines.join("\n");
 }
@@ -531,6 +557,20 @@ export default function OrderPage() {
                 >
                   Place order on WhatsApp →
                 </button>
+
+                {!canSubmit && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#B5484D" }}>
+                    Before you can submit, add:{" "}
+                    {[
+                      cart.length === 0 && "at least one item",
+                      !customer.name && "your name",
+                      !customer.phone && "your phone number",
+                      !customer.date && "a delivery date",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </div>
+                )}
               </form>
             </>
           )}
